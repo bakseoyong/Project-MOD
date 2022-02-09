@@ -1,0 +1,30 @@
+--@ BeginProperty
+--@ SyncDirection=All
+string stage = """"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=Server
+void setTeleportMapDataStorage(Entity player)
+{
+local myPlayerName = player.Name
+local playerData = _DataStorageService:GetDataStorage(myPlayerName .. "_playerData")
+
+playerData:SetAndWait("teleportMap", "/maps/" .. self.stage)
+
+_InstanceMapService:MoveUserToParentMap(myPlayerName)
+}
+--@ EndMethod
+
+--@ BeginEntityEventHandler
+--@ Scope=All
+--@ Target=self
+--@ EventName=TouchEvent
+HandleTouchEvent
+{
+-- Parameters
+--------------------------------------------------------
+self:setTeleportMapDataStorage(_UserService.LocalPlayer)
+}
+--@ EndEntityEventHandler
+

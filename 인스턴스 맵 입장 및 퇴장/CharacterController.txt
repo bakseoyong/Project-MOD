@@ -1,0 +1,171 @@
+--@ BeginProperty
+--@ SyncDirection=All
+Vector2 size = "Vector2(0,0)"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+Vector2 offset = "Vector2(0,0)"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=ServerOnly
+void OnBeginPlay()
+{
+------------------------[[ about teleport ]] ------------------------------------------
+-- 접속했을때 정보를 디비에서 꺼내오기
+local myPlayerName = self.Entity.Name
+local playerData = _DataStorageService:GetDataStorage(myPlayerName .. "_playerData")
+
+local teleportMapString = playerData:GetAndWait("teleportMap")
+if teleportMapString == nil then teleportMapString = "/maps/FirstTown" end
+
+local teleportMapEntity = _EntityService:GetEntityByPath(teleportMapString)
+
+-- 인스턴스 맵 or 부모 맵 으로 이동한 경우 Teleport
+_TeleportService:TeleportToEntity(self.Entity, teleportMapEntity)
+
+log(self.Entity.CurrentMapName)
+
+-- Trigger Box
+self.size = Vector2(0.66, 0.7)
+self.offset = Vector2(0, 0.35)
+
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void OnMapEnter(any enteredMap)
+{
+--텔레포트 맵을 지정하는 건 서버에서
+self:setTeleportMapDataStorage(self.Entity, enteredMap)
+
+self.Entity.RigidbodyComponent.IsQuaterViewMove = true
+
+if enteredMap.StageMapController then
+	self:characterInStage()
+elseif enteredMap.TownMapController then
+	self.Entity.RigidbodyComponent.IsQuaterViewMove = false
+	self:characterInTown()
+	if self:IsClient() then
+		self:characterInTownChangeUi()
+	end
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Server
+void spawnPetEntity()
+{
+-- TOWN
+local entityTemplate = self.Entity.CurrentMap:GetChildByName("PetParent")
+local name = self.Entity.Name .. " Pet"
+local position = self.Entity.TransformComponent.Position
+
+-- 두개가 생성되는 것을 막기 위해 server only로 바꾸면 isQuaterMove가 정상적으로 작동하지 않음
+-- 클라이언트, 서버에서 두번 호출되지만 둘 다 서버에서 실행되기 때문에 두번 생성할 필요없이 추후에 접근은 return
+if self.Entity.CurrentMap:GetChildByName(name) then
+	return
+end
+
+local spawnedEntity = _SpawnService:SpawnByEntityTemplate(entityTemplate, name, position)
+spawnedEntity.SpriteRendererComponent.SpriteRUID = self.Entity.CharacterRidingController:getRuid()
+
+spawnedEntity.PetController:setPlayer(self.Entity)
+spawnedEntity.ExtendPetStateComponent:setPlayer(self.Entity)
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void OnMapLeave(any leftMap)
+{
+if leftMap.TownMapController then
+	if leftMap:GetChildByName(self.Entity.Name .. " Pet"):Destroy() then
+		log("pet destory success")
+	end
+elseif leftMap.StageMapController then
+	-- characterInStage
+	self.Entity:RemoveComponent("StageMapBoundaryManager")
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Client
+void teleportPlayerAtClient(Entity teleportMapEntity)
+{
+_TeleportService:TeleportToEntity(_UserService.LocalPlayer, teleportMapEntity)
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Server
+void setTeleportMapDataStorage(Entity player,Entity enterMap)
+{
+local playerData = _DataStorageService:GetDataStorage(player.Name .. "_playerData")
+
+playerData:SetAndWait("teleportMap", "/maps/" .. enterMap.Name)
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=ServerOnly
+void characterInTown()
+{
+log("enter town")
+self:spawnPetEntity()
+self.Entity.SpriteRendererComponent.Enable = false
+self.Entity.AvatarRendererComponent.Enable = true
+self.Entity.CostumeManagerComponent.Enable = true
+self.Entity.StateStringToAvatarActionComponent.Enable = true
+self.Entity.RigidbodyComponent.IsQuaterViewMove = false
+
+self.size = Vector2(0.66, 0.7)
+self.offset = Vector2(0, 0.35)
+self.Entity.TriggerComponent.BoxSize = self.size
+self.Entity.TriggerComponent.BoxOffset = self.offset
+log(self.Entity.TriggerComponent.BoxSize.x .. " " .. self.Entity.TriggerComponent.BoxSize.y)
+log(self.Entity.TriggerComponent.BoxOffset.x .. " " .. self.Entity.TriggerComponent.BoxOffset.y)
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void characterInStage()
+{
+self.Entity.AvatarRendererComponent.Enable = false
+self.Entity.CostumeManagerComponent.Enable = false
+self.Entity.StateStringToAvatarActionComponent.Enable = false
+self.Entity.SpriteRendererComponent.Enable = true
+self.Entity.SpriteRendererComponent.SpriteRUID = self.Entity.CharacterRidingController:getRuid()
+--self.Entity:AddComponent("StageTempPropertyManager")
+
+--self:setRideRiding(self.ridingId)
+if self:IsClient() then
+	_EntityService:GetEntityByPath("/ui/DefaultGroup/InventoryButton"):SetVisible(false)
+	_EntityService:GetEntityByPath("/ui/DefaultGroup/Inventory"):SetVisible(false)
+	_EntityService:GetEntityByPath("/ui/DefaultGroup/EquipedSpriteButton"):SetVisible(false)
+	_EntityService:GetEntityByPath("/ui/DefaultGroup/EquipedSprite"):SetVisible(false)
+end
+
+self.Entity.TriggerComponent.BoxSize = self.Entity.CharacterRidingController:getSize()
+self.Entity.TriggerComponent.BoxOffset = self.Entity.CharacterRidingController:getOffset()
+log(self.Entity.TriggerComponent.BoxSize.x .. " " .. self.Entity.TriggerComponent.BoxSize.y)
+log(self.Entity.TriggerComponent.BoxOffset.x .. " " .. self.Entity.TriggerComponent.BoxOffset.y)
+-- OnMapLeave
+self.Entity:AddComponent("StageMapBoundaryManager")
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Client
+void characterInTownChangeUi()
+{
+_EntityService:GetEntityByPath("/ui/DefaultGroup/InventoryButton"):SetVisible(true)
+_EntityService:GetEntityByPath("/ui/DefaultGroup/EquipedSpriteButton"):SetVisible(true)
+}
+--@ EndMethod
+

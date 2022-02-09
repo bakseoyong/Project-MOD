@@ -1,0 +1,53 @@
+--@ BeginProperty
+--@ SyncDirection=All
+string stage = """"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=Server
+void CreateOrAttendMap(Entity player)
+{
+local nextMap = _InstanceMapService:GetOrCreateInstanceMap(tostring(player.Name))
+
+local members = player.CharacterPartyController.members
+
+if #members == 0 then
+	log("member num is 0")
+	player.CharacterPartyController:createParty()
+end
+
+-- MoveUsers 동작 X
+for index, member in pairs(members) do
+	nextMap:MoveUser(member.Name)
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Server
+void setUserTeleportMapDataStorage(table<Entity> members)
+{
+for i = 1, #members do
+	local myPlayerName = members[i].Name
+	local playerData = _DataStorageService:GetDataStorage(myPlayerName .. "_playerData")
+	playerData:SetAndWait("teleportMap", "/maps/" .. self.Entity.StageGaurdController.stage)
+	log("/maps/" .. self.Entity.StageGaurdController.stage)
+end
+
+}
+--@ EndMethod
+
+--@ BeginEntityEventHandler
+--@ Scope=Client
+--@ Target=self
+--@ EventName=TouchEvent
+HandleTouchEvent
+{
+-- Parameters
+--------------------------------------------------------
+--self:setUserTeleportMapDataStorage(_UserService.LocalPlayer)
+self:setUserTeleportMapDataStorage(_UserService.LocalPlayer.CharacterPartyController.members)
+self:CreateOrAttendMap(_UserService.LocalPlayer)
+}
+--@ EndEntityEventHandler
+
