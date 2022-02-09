@@ -1,0 +1,100 @@
+--@ BeginMethod
+--@ MethodExecSpace=ServerOnly
+void clearStage()
+{
+local count = self.Entity:GetChildByName("count")
+count.CountController:setClearTextToServer()
+
+wait(5)
+self:movePartyToParentMap()
+
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void movePartyToParentMap()
+{
+local currentMapPlayerEntities = _UserService:GetUsersByMapName(self.Entity.Name)
+local currentMapPlayerNames = {}
+for i = 1, #currentMapPlayerEntities do
+	currentMapPlayerNames[i] = currentMapPlayerEntities[i].Name
+	local playerData = _DataStorageService:GetDataStorage(currentMapPlayerNames[i] .. "_playerData")
+	playerData:SetAndWait("teleportMap", "/maps/Stage" .. string.sub(self.Entity.Name, 1, 1))
+end
+_InstanceMapService:MoveUsersToParentMap(currentMapPlayerNames)
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void moveMemberToParentMap(string name)
+{
+_InstanceMapService:MoveUserToParentMap(name)
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void destroyPlayerRidingEntity(Entity player)
+{
+if self.Entity:GetChildByName(player.Name .. " Riding") then
+	self.Entity:GetChildByName(player.Name .. " Riding"):Destroy()
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=ServerOnly
+void failStage()
+{
+local count = self.Entity:GetChildByName("count")
+count.CountController:setFailTextToServer()
+
+wait(2)
+
+self:movePartyToParentMap()
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void isFailStage()
+{
+local players = _UserService:GetUsersByMapName(self.Entity.CurrentMapName)
+local playerDeadCount = 0
+
+for index, player in pairs(players) do
+	if player.CharacterLifeController.isDead == true then
+		playerDeadCount = playerDeadCount + 1 
+	end
+end
+
+if playerDeadCount == #players then
+	self:failStage()
+end
+}
+--@ EndMethod
+
+--@ BeginEntityEventHandler
+--@ Scope=All
+--@ Target=service:EntityService
+--@ EventName=EntityDestroyEvent
+HandleEntityDestroyEvent
+{
+-- Parameters
+local Entity = event.Entity
+--------------------------------------------------------
+--[[
+if Entity.MonsterController then
+	if Entity.MonsterController.hp <= 0 then
+		log(self.Entity.Path)
+		local scoreSprite = _EntityService:GetEntityByPath(self.Entity.Path .. "/ScoreSprite")
+		local text_num = scoreSprite:GetChildByName("text_num")
+		text_num.TextComponent.Text = tostring(tonumber(text_num.TextComponent.Text) + 1000)
+	end
+end
+]]--
+}
+--@ EndEntityEventHandler
+

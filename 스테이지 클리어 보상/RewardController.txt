@@ -1,0 +1,87 @@
+--@ BeginProperty
+--@ SyncDirection=All
+string itemTypeName = """"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+string name = """"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+number bonusPercentage = "0"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+Component itemTypeManager = "c214b761-2030-41db-bac3-84405f5fd24d:ItemTypeManager"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void OnBeginPlay()
+{
+self.Entity:AddComponent("TriggerComponent")
+self.Entity.TriggerComponent.BoxOffset = Vector2(0,0)
+self.Entity.TriggerComponent.BoxSize = Vector2(1,1)
+
+self.bonusPercentage = self.Entity.CurrentMap.RewardCreateManager:getBounsPercentage()
+self:setItem()
+
+
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void setItem()
+{
+local stageClearRewardDataSet = _DataService:GetTable("StageClearRewardDataSet")
+local rewardTable = {}
+
+local random = math.random(1, 100)
+
+for i = 1, stageClearRewardDataSet:GetRowCount() do
+	-- same stage
+	if self.Entity.Parent.Name == stageClearRewardDataSet:GetCell(i, "STAGE") then
+		-- percentage
+		if random <= ( tonumber(stageClearRewardDataSet:GetCell(i, "PERCENTAGE")) + self.bonusPercentage ) then
+			self.itemTypeName = stageClearRewardDataSet:GetCell(i, "TYPE")
+			self.name = stageClearRewardDataSet:GetCell(i, "NAME")
+			--log(self.name .. " itemTypeName : " .. self.itemTypeName)
+			self.Entity.SpriteRendererComponent.SpriteRUID = stageClearRewardDataSet:GetCell(i, "RUID")
+			return
+		end
+	end
+end
+
+
+}
+--@ EndMethod
+
+--@ BeginEntityEventHandler
+--@ Scope=All
+--@ Target=self
+--@ EventName=TriggerEnterEvent
+HandleTriggerEnterEvent
+{
+-- Parameters
+local TriggerBodyEntity = event.TriggerBodyEntity
+--------------------------------------------------------
+if TriggerBodyEntity.CharacterController then
+	local myEntityPath = self.Entity.Path
+
+	_TimerService:SetTimerOnce(function()
+		local itemTypeManager = _EntityService:GetEntityByPath("/common").ItemTypeManager
+		local itemCreateRemoveManager = _EntityService:GetEntityByPath("/common").ItemCreateRemoveManager
+		itemCreateRemoveManager:createItem(TriggerBodyEntity, self.name, self.itemTypeName)
+	        --_ItemService:CreateItem(itemTypeManager:getItemType(self.itemTypeName), self.name, 
+				--TriggerBodyEntity.InventoryComponent)
+	    end, 1)
+	
+	self.Entity:SetEnable(false)
+end
+}
+--@ EndEntityEventHandler
+

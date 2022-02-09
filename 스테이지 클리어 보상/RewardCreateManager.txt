@@ -1,0 +1,74 @@
+--@ BeginProperty
+--@ SyncDirection=All
+number killScore = "0"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+number totalScore = "0"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+number bonusPercentage = "0"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void addTotalScore()
+{
+-- MonsterController 에서 호출됨
+self.totalScore = self.totalScore + 1000
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void addKillScore()
+{
+-- ExtendMonsterHitController 에서 호출됨
+self.killScore = self.killScore + 1000
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+number getBounsPercentage()
+{
+return self.bonusPercentage
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void setBonusPercentage()
+{
+self.bonusPercentage = math.ceil( (self.killScore / self.totalScore) * 10 )
+}
+--@ EndMethod
+
+--@ BeginEntityEventHandler
+--@ Scope=Server
+--@ Target=service:EntityService
+--@ EventName=EntityDestroyEvent
+HandleEntityDestroyEvent
+{
+-- Parameters
+local Entity = event.Entity
+--------------------------------------------------------
+if Entity.MonsterController == nil then return end
+
+if Entity.MonsterController.isBoss == true then
+	
+	self:setBonusPercentage()
+	
+	local entityTemplate = self.Entity:GetChildByName("EmptyEntity")
+	local name = "Reward"
+	local position = Entity.TransformComponent.Position
+	
+	local reward = _SpawnService:SpawnByEntityTemplate(entityTemplate, name, position)
+	reward:AddComponent("RewardController")
+end
+}
+--@ EndEntityEventHandler
+
