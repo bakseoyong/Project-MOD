@@ -1,0 +1,24 @@
+--@ BeginProperty
+--@ SyncDirection=All
+Component itemTypeManager = "c214b761-2030-41db-bac3-84405f5fd24d:ItemTypeManager"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=ServerOnly
+void createItem(Entity player,string itemString,string typeString)
+{
+if typeString == "Making" then
+	if player.CharacterInventoryManager:getItemCount(itemString) == nil then
+		_ItemService:CreateItem(self.itemTypeManager:getItemType(typeString), itemString, player.InventoryComponent)
+	end
+	
+	player.CharacterInventoryManager:addItemCount(itemString, 1)
+else
+	_ItemService:CreateItem(self.itemTypeManager:getItemType(typeString), itemString, player.InventoryComponent)
+end
+
+
+
+}
+--@ EndMethod
+

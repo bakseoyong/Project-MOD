@@ -1,0 +1,165 @@
+--@ BeginProperty
+--@ SyncDirection=All
+table<string,number> itemCountTable = "string|number"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=None
+table nowPrintEquipedTypeTable = "{}"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void initItemCountTable()
+{
+local items = self.Entity.InventoryComponent:GetItemsWithType(Making)
+
+for index, item in pairs(items) do
+	self.itemCountTable[item.ItemDataTableName] = item.ItemCount
+	log(self.itemCountTable[item.ItemDataTableName] .. " " .. item.ItemDataTableName)
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+number getItemCount(string itemString)
+{
+log(self.itemCountTable[itemString])
+return self.itemCountTable[itemString]
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void addItemCount(string itemString,number amount)
+{
+
+if self.itemCountTable[itemString] == nil then
+ 	self.itemCountTable[itemString] = 1
+	return 
+end
+
+self.itemCountTable[itemString] = self.itemCountTable[itemString] + amount
+self:refreshItemCountTable()
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void setItemCountNil(string itemString)
+{
+self.itemCountTable[itemString] = nil
+self:refreshItemCountTable()
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void refreshItemCountTable()
+{
+local items = self.Entity.InventoryComponent:GetItemsWithType(Making)
+
+for index, item in pairs(items) do
+	item.ItemCount = self.itemCountTable[item.ItemDataTableName]
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void setEquipedUnenable()
+{
+if self:IsServer() then return end
+
+
+local itemSlots 
+	= _EntityService:GetEntitiesByPath("/ui/DefaultGroup/Inventory/InventoryPanel/Inventory_ScrollView/Item")
+
+for index, itemSlot in pairs(itemSlots) do
+	itemSlot:GetChildByName("img_slot"):GetChildByName("item_equiped"):SetEnable(false)
+end
+
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void nowPrintEquipedInventoryItemSprite(Entity inventoryItemSprite,string itemTypeName)
+{
+if self.nowPrintEquipedTypeTable[itemTypeName] ~= nil then
+	self.nowPrintEquipedTypeTable[itemTypeName].ItemController:setUnenableEquipSprite()
+end
+
+self.nowPrintEquipedTypeTable[itemTypeName] = inventoryItemSprite
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Client
+void setLastIndexInventoryItemEquipedEnable()
+{
+local inventoryScrollView 
+	= _EntityService:GetEntityByPath("/ui/DefaultGroup/Inventory/InventoryPanel/Inventory_ScrollView")
+
+local itemSlots = inventoryScrollView.Children
+
+itemSlots[#itemSlots]:GetChildByName("img_slot"):GetChildByName("item_equiped"):SetEnable(false)
+
+}
+--@ EndMethod
+
+--@ BeginEntityEventHandler
+--@ Scope=All
+--@ Target=self
+--@ EventName=InventoryItemAddedEvent
+HandleInventoryItemAddedEvent
+{
+-- Parameters
+local Entity = event.Entity
+local Items = event.Items
+--------------------------------------------------------
+
+wait(0.5)
+self:setLastIndexInventoryItemEquipedEnable()
+}
+--@ EndEntityEventHandler
+
+--@ BeginEntityEventHandler
+--@ Scope=All
+--@ Target=self
+--@ EventName=InventoryItemInitEvent
+HandleInventoryItemInitEvent
+{
+-- Parameters
+local Entity = event.Entity
+local Items = event.Items
+--------------------------------------------------------
+self:initItemCountTable()
+-- no wait, no load Item
+wait(0.5)
+self:setEquipedUnenable()
+}
+--@ EndEntityEventHandler
+
+--@ BeginEntityEventHandler
+--@ Scope=All
+--@ Target=self
+--@ EventName=InventoryItemRemovedEvent
+HandleInventoryItemRemovedEvent
+{
+-- Parameters
+local Entity = event.Entity
+local Items = event.Items
+--------------------------------------------------------
+
+for index, item in pairs(Items) do
+	if item.ItemTypeName == "Making" then
+		_ItemService:RemoveItem(item)
+		self:setItemCountNil(item.ItemDataTableName)
+	end
+end
+
+}
+--@ EndEntityEventHandler
+
