@@ -1,0 +1,48 @@
+--@ BeginMethod
+--@ MethodExecSpace=Client
+void sendingPlayerEntityToClinet(Entity playerEntity)
+{
+local playerEntitiesDic = _UserService.UserEntities
+
+if _UserService.LocalPlayer == playerEntity then
+	local ProposeParty = _EntityService:GetEntityByPath("ui/DefaultGroup/ProposeParty")
+	ProposeParty.Visible = true
+end
+}
+--@ EndMethod
+
+--@ BeginEntityEventHandler
+--@ Scope=All
+--@ Target=self
+--@ EventName=ButtonClickEvent
+HandleButtonClickEvent
+{
+-- Parameters
+local Entity = event.Entity
+
+--------------------------------------------------------
+local Item = Entity.Parent
+local ScrollLayout = Item.Parent
+local Leaderboard = ScrollLayout.Parent
+local ItemChildArr = Item.Children
+local Nickname = ItemChildArr[2]
+
+local playerEntitiesDic = _UserService.UserEntities         -- 게임에 접속해 있는 모든 플레이어 엔티티를 딕셔너리 형태로 받아옵니다.
+for index, player in pairs(playerEntitiesDic) do
+	
+	if player.PlayerComponent.Nickname == Nickname.TextComponent.Text then
+		local members = _UserService.LocalPlayer.CharacterPartyController.members
+		if #members <= 3 and player ~= _UserService.LocalPlayer then
+			for index, member in pairs(members) do
+				if member == player then
+					return
+				end
+			end
+			_UserService.LocalPlayer.CurrentMap.PartyManager:requestPartyToPlayer(_UserService.LocalPlayer, player)
+		end
+		
+	end
+end
+
+}
+--@ EndEntityEventHandler

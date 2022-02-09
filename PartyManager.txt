@@ -1,0 +1,15 @@
+--@ BeginMethod
+--@ MethodExecSpace=Server
+void requestPartyToPlayer(Entity from,Entity to)
+{
+to.CharacterPartyController:requestParty(from, to)
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Server
+void responsePartyToPlayer(Entity from,Entity to)
+{
+to.CharacterPartyController:responseParty(from, to)
+}
+--@ EndMethod

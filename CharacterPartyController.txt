@@ -1,0 +1,147 @@
+--@ BeginProperty
+--@ SyncDirection=All
+table<Entity> members = "Entity"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+table<Entity> mapLeaveMembers = "Entity"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=Client
+void requestParty(Entity from,Entity to)
+{
+if _UserService.LocalPlayer == to then
+	local proposeParty = _EntityService:GetEntityByPath("/ui/DefaultGroup/ProposeParty")
+	local name = proposeParty:GetChildByName("txt_name")
+	name.TextComponent.Text = from.PlayerComponent.Nickname
+		
+	proposeParty.Enable = true
+	proposeParty.Visible = true
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Client
+void responseParty(Entity from,Entity to)
+{
+if _UserService.LocalPlayer == to then
+	local tempMembers = {}
+	
+
+	-- 해당 조건문을 삽입하지 않으면 파티를 구성했을때 파티장은 인스턴스 맵 이동 불가능
+	if #tempMembers == 0 then
+		tempMembers[1] = self.Entity
+	end
+	
+	self.members[#self.members + 1] = from
+	tempMembers[#tempMembers + 1] = from
+	
+	log(#self.members .. "    " .. #tempMembers)
+	
+	self:syncMembersProperty(tempMembers)
+	self:syncMembersToPartyMember()
+	
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Server
+void syncMembersProperty(table<Entity> tempMembers)
+{
+for i = 1, #tempMembers do
+	self.members[i] = tempMembers[i]
+end
+log(#self.members)
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=ServerOnly
+void OnBeginPlay()
+{
+-- if instance map enter
+
+wait(2)
+
+if self.Entity.CurrentMap.StageMapController then
+	local instanceMapPlayerArr = _UserService:GetUsersByMapName(self.Entity.CurrentMapName)
+	for index, player in pairs(instanceMapPlayerArr) do
+		self.members[index] = player
+	end
+	log("인스턴스맵 플레이어 수 : " .. #instanceMapPlayerArr)
+end
+
+-- 재접속한 경우 이미 파티가 있을수도 있으므로 if문 일단 나둔다.
+if #self.members == 0 then
+	self:createParty()
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void createParty()
+{
+self.members[1] = self.Entity
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Server
+void syncMembersToPartyMember()
+{
+for index, player in pairs(self.members) do
+	player.CharacterPartyController:syncPartyMembersAtClient(self.members)
+	log(player.Name .. " : " .. #player.CharacterPartyController.members .. "명")
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Client
+void syncPartyMembersAtClient(table<Entity> members)
+{
+for i = 1, #members do
+	self.members[i] = members[i]
+end
+
+log("파티 : " .. #self.members)
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=ClientOnly
+void OnMapEnter(any enteredMap)
+{
+
+self:onMapEnterSyncPartyMemberAtServer(self.members)
+self:syncMembersToPartyMember()
+log("맵 입장 파티원 명수 : " .. #self.members)
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=ClientOnly
+void OnMapLeave(any leftMap)
+{
+
+self:onMapEnterSyncPartyMemberAtServer(self.members)
+self:syncMembersToPartyMember()
+log("맵 퇴장 파티원 명수 : " .. #self.members)
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Server
+void onMapEnterSyncPartyMemberAtServer(table<Entity> members)
+{
+for i = 1, #members do
+	self.members[i] = members[i]
+end
+}
+--@ EndMethod
+
