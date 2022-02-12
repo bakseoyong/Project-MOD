@@ -1,0 +1,26 @@
+--@ BeginProperty
+--@ SyncDirection=All
+string ruid = ""67f6d0aef28940ef8f55d46cdd8da22d""
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+number NewValue1 = "0"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void setShootingRuid(string ruid)
+{
+self.ruid = ruid
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+string getShootingRuid()
+{
+return self.ruid
+}
+--@ EndMethod
+

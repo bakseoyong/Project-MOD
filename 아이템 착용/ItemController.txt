@@ -1,0 +1,76 @@
+--@ BeginProperty
+--@ SyncDirection=None
+boolean doubleClick = "false"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void setEnableEquipSprite()
+{
+self.Entity:GetChildByName("img_slot"):GetChildByName("item_equiped"):SetEnable(true)
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void setUnenableEquipSprite()
+{
+self.Entity:GetChildByName("img_slot"):GetChildByName("item_equiped"):SetEnable(false)
+}
+--@ EndMethod
+
+--@ BeginEntityEventHandler
+--@ Scope=Client
+--@ Target=self
+--@ EventName=ButtonClickEvent
+HandleButtonClickEvent
+{
+-- Parameters
+local Entity = event.Entity
+--------------------------------------------------------
+-- 더블클릭 판별
+if self.doubleClick == false then
+	self.doubleClick = true
+	wait(0.5)
+	self.doubleClick = false
+end
+
+if self.doubleClick then
+	local inventoryScrollView = self.Entity.Parent
+	local itemSprites = inventoryScrollView.Children
+	
+	local inventoryItemIndex = 0
+	-- 이 방법 말고 index 구하는법 전부 실패함.
+	for index, itemSprite in pairs(itemSprites) do
+		if itemSprite == self.Entity then
+			inventoryItemIndex = index - 1
+		end
+	end
+	
+	local player = _UserService.LocalPlayer
+	local inventoryItems = player.InventoryComponent:GetItemList()
+	
+	-- isCharacterEquipType
+	if _EntityService:GetEntityByPath("/common").ItemTypeManager:isCharacterEquipTypeString(
+		inventoryItems[inventoryItemIndex].ItemTypeName) then
+		
+		-- '현재 착용 중' 출력
+		self:setEnableEquipSprite()
+		-- 같은 부위를 다른 아이템이 착용될 경우 동작하기 위해 추가
+		player.CharacterInventoryManager:nowPrintEquipedInventoryItemSprite(
+			self.Entity, inventoryItems[inventoryItemIndex].ItemTypeName)
+		
+		-- 아이템 이름이 아니라 인덱스 값을 전달하는 이유는 더블클릭한 아이템이 동작하여야 하기 때문
+		player.CharacterCostumeEquipController:setEquipCostume(inventoryItemIndex)
+	end
+		
+end
+
+
+
+
+
+
+}
+--@ EndEntityEventHandler
+

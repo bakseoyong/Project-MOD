@@ -1,0 +1,123 @@
+--@ BeginProperty
+--@ SyncDirection=All
+number additionalLife = "0"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+number additionalPower = "0"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+Component itemTypeManager = "c214b761-2030-41db-bac3-84405f5fd24d:ItemTypeManager"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=None
+table equipTable = "{}"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=None
+table equipLifeEffectTable = "{}"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+Component costumeTypeManager = "c214b761-2030-41db-bac3-84405f5fd24d:CostumeTypeManager"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=None
+table equipPowerEffectTable = "{}"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=Server
+void setEquipCostume(number inventoryItemIndex)
+{
+local inventory = self.Entity.InventoryComponent
+local inventoryItems = inventory:GetItemList()
+local itemDataTableName = inventoryItems[inventoryItemIndex].ItemDataTableName
+local itemTypeName = inventoryItems[inventoryItemIndex].ItemTypeName
+local itemType = self.itemTypeManager:getItemType(itemTypeName)
+local avatarRuid = nil
+local iconRUID = nil
+local userItemDataSet = _DataService:GetCCTable("UserItemDataSet")
+local costumeManager = self.Entity.CostumeManagerComponent
+local costumeType = self.costumeTypeManager:getCostumeType(itemTypeName)
+
+
+-- 라이딩은 AllMonsterDataSet에서 받으므로 따로 설정
+if itemTypeName == "Riding" then
+	self.Entity.CharacterRidingController:setRideRiding(itemDataTableName)
+	return
+end
+
+
+-- 해당 부위를 이미 착용하고 있는지 확인
+-- 확인을 먼저하는 이유는 공격력, 생명에서 그만큼 빼려고
+if self.equipTable[itemTypeName] ~= nil then
+	self.additionalPower = self.additionalPower - self.equipPowerEffectTable[itemTypeName]
+	self.additionalLife = self.additionalLife - self.equipLifeEffectTable[itemTypeName]
+	
+end
+
+-- 새로운 부위 착용
+self.equipTable[itemTypeName] = inventoryItems[inventoryItemIndex]
+
+-- ready to setEquipCostumeAtClient()
+for i = 1, userItemDataSet:GetRowCount() do
+	if userItemDataSet:GetCell(i, "Name") == itemDataTableName then
+		self.equipPowerEffectTable[itemTypeName] = tonumber(userItemDataSet:GetCell(i, "POWER"))
+		self.equipLifeEffectTable[itemTypeName] = tonumber(userItemDataSet:GetCell(i, "LIFE"))
+		self.additionalLife = self.additionalLife + self.equipLifeEffectTable[itemTypeName]
+		self.additionalPower = self.additionalPower + self.equipPowerEffectTable[itemTypeName]
+
+ 
+		avatarRuid = userItemDataSet:GetCell(i, "AVATAR_RUID")
+		iconRUID = userItemDataSet:GetCell(i, "IconRUID")
+	end
+end
+
+-- 현재 착용중인 장비에 Sprite값 출력하기
+self:setEquipSpriteAtClient(self.Entity, itemTypeName, itemDataTableName, iconRUID)
+
+
+if costumeType ~= nil then
+	costumeManager:SetEquip(costumeType, avatarRuid)
+else 
+	-- bullet
+	-- bullet : change shootingRuid
+	if itemTypeName == "Bullet" then
+		self.Entity.CharacterBulletController:setShootingRuid(avatarRuid)
+		return
+	end
+end
+
+
+self.Entity.CharacterLifeController:setLifeNumText(self.Entity, self.additionalLife)
+self.Entity.CharacterLifeController:setLife(self.additionalLife)
+--self.Entity.CharacterLifeController:setCostumeLifeEffect(self.additionalLife)
+self.Entity.CharacterPowerController:setCostumePowerEffect(self.additionalPower)
+
+-- power, life를 각각의 컨트롤러에서 하도록 수정해야됨
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Client
+void setEquipSpriteAtClient(Entity player,string itemTypeName,string itemDataTableName,string iconRUID)
+{
+if _UserService.LocalPlayer == player then
+	local EquipedSprite = _EntityService:GetEntityByPath("/ui/DefaultGroup/EquipedSprite")
+	
+	EquipedSprite:GetChildByName("Scroll_Layout")
+	:GetChildByName(itemTypeName).EquipedItemController:equipedItemController(
+		itemTypeName, itemDataTableName, iconRUID)
+end
+
+}
+--@ EndMethod
+

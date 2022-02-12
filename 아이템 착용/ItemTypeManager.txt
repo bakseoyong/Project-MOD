@@ -1,0 +1,61 @@
+--@ BeginProperty
+--@ SyncDirection=None
+table itemTypeTable = "{}"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=None
+table characterEquipTypeTable = "{}"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void OnBeginPlay()
+{
+self.itemTypeTable["Cap"] = Cap
+self.itemTypeTable["Making"] = Making
+self.itemTypeTable["Riding"] = Riding
+self.itemTypeTable["Bullet"] = Bullet
+
+self.characterEquipTypeTable["Cap"] = Cap
+self.characterEquipTypeTable["Riding"] = Riding
+self.characterEquipTypeTable["Bullet"] = Bullet
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+any getItemType(string itemTypeString)
+{
+return self.itemTypeTable[itemTypeString]
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+table getItemTypeTable()
+{
+return self.itemTypeTable
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+table getCharacterEquipTypeTable()
+{
+return self.characterEquipTypeTable
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+boolean isCharacterEquipTypeString(string itemTypeString)
+{
+if self.characterEquipTypeTable[itemTypeString] ~= nil then
+	return true
+end
+
+return false
+}
+--@ EndMethod
+

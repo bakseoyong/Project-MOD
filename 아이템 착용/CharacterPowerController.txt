@@ -1,0 +1,72 @@
+--@ BeginProperty
+--@ SyncDirection=All
+number power = "0"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+number ridingPowerEffect = "0"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+number costumePowerEffect = "0"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void setRidingPowerEffect(number amount)
+{
+self.power = self.power - self.ridingPowerEffect
+self.ridingPowerEffect = amount
+self.power = self.power + self.ridingPowerEffect
+log("now power : " .. self.power)
+
+local myPlayerName = self.Entity.Name
+local playerData = _DataStorageService:GetDataStorage(myPlayerName .. "_playerData")
+
+playerData:SetAndWait("power", self.power)
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void setCostumePowerEffect(number amount)
+{
+self.power = self.power - self.costumePowerEffect
+self.costumePowerEffect = amount
+self.power = self.power + self.costumePowerEffect
+log("now power : " .. self.power)
+
+local myPlayerName = self.Entity.Name
+local playerData = _DataStorageService:GetDataStorage(myPlayerName .. "_playerData")
+
+playerData:SetAndWait("power", self.power)
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+number getPower()
+{
+return self.power
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=ServerOnly
+void OnEndPlay()
+{
+local myPlayerName = self.Entity.Name
+local playerData = _DataStorageService:GetDataStorage(myPlayerName .. "_playerData")
+
+local teleportMapString = playerData:GetAndWait("teleportMap")
+local map = _EntityService:GetEntityByPath(teleportMapString)
+
+if map.MapComponent.IsInstanceMap == false then
+	playerData:SetAndWait("ridingString", nil)
+end
+
+}
+--@ EndMethod
+

@@ -1,0 +1,165 @@
+--@ BeginProperty
+--@ SyncDirection=All
+number life = "3"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+boolean isDead = "false"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=ClientOnly
+void OnMapEnter(any enteredMap)
+{
+if enteredMap.StageMapController then
+	local lifeSprite = _EntityService:GetEntityByPath("/ui/DefaultGroup/LifeSprite")
+	lifeSprite.Enable = true
+	lifeSprite.Visible = true
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=ClientOnly
+void OnMapLeave(any leftMap)
+{
+if leftMap.StageMapController then
+	local lifeSprite = _EntityService:GetEntityByPath("/ui/DefaultGroup/LifeSprite")
+	lifeSprite.Enable = false
+	lifeSprite.Visible = false
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Client
+void setLifeNumText(Entity player,number additionalLife)
+{
+if player == _UserService.LocalPlayer then
+	local lifeNumText = _EntityService:GetEntityByPath("/ui/DefaultGroup/LifeSprite/LifeNum")
+	--lifeNumText.TextComponent.Text = tostring(math.ceil(tonumber(lifeNumText.TextComponent.Text) + additionalLife))
+	lifeNumText.TextComponent.Text = tostring(math.ceil(3 + additionalLife))
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Client
+void discountLifeUi(Entity player,number life)
+{
+log(player.Name .. " " .. life)
+if player == _UserService.LocalPlayer then
+	local lifeNumText = _EntityService:GetEntityByPath("/ui/DefaultGroup/LifeSprite/LifeNum")
+	lifeNumText.TextComponent.Text = tostring(math.ceil(life))
+end
+
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=ServerOnly
+void characterDamaged()
+{
+self.Entity.TriggerComponent.Enable = false
+self.Entity.SpriteRendererComponent.SpriteRUID = "49621e22bbab410d87318e2f8cd57899"
+wait(0.5)
+
+_TimerService:SetTimerOnce(function()
+	self.Entity:SetEnable(true)
+	-- power up을 없애고, setRideRiding의 덩치가 커졌으므로 ruid만 바꾸면 될 것 같다.
+	--self.Entity.CharacterRidingController:setRideRiding(self.Entity.CharacterRidingController:getName())
+	self.Entity.SpriteRendererComponent.SpriteRUID = self.Entity.CharacterRidingController:getRuid()
+	local color = self.Entity.SpriteRendererComponent.Color
+	color.a = 0.5
+	
+	wait(2)
+	self.Entity.TriggerComponent.Enable = true
+	color.a = 1
+end, 1)
+ 
+self.Entity:SetEnable(false)
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Client
+void setRidingRuid(string ruid,Entity player)
+{
+if player == _UserService.LocalPlayer then
+	local ridingRuidSprite = _EntityService:GetEntityByPath("/ui/DefaultGroup/LifeSprite/RidingRuid")
+	ridingRuidSprite.SpriteGUIRendererComponent.ImageRUID = ruid
+end
+
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=ServerOnly
+void discountLifeProperty()
+{
+self.life = self.life - 1
+self:discountLifeUi(self.Entity, self.life)
+
+if self.life <= 0 then
+	wait(2)
+	self.Entity:SetEnable(false)
+	local count = _EntityService:GetEntityByPath(self.Entity.CurrentMap.Path .."/Count")
+	count.CountController:setDeadText(self.Entity)
+	self.isDead = true
+	self.Entity.CurrentMap.StageMapController:isFailStage()
+	-- self:setStageTextDeadMessage()
+end
+
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void setLife(number amount)
+{
+self.life = 3 + amount
+
+local myPlayerName = self.Entity.Name
+local playerData = _DataStorageService:GetDataStorage(myPlayerName .. "_playerData")
+
+playerData:SetAndWait("life", self.life)
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=ServerOnly
+void OnEndPlay()
+{
+local myPlayerName = self.Entity.Name
+local playerData = _DataStorageService:GetDataStorage(myPlayerName .. "_playerData")
+
+local teleportMapString = playerData:GetAndWait("teleportMap")
+local map = _EntityService:GetEntityByPath(teleportMapString)
+
+if map.MapComponent.IsInstanceMap == false then
+	playerData:SetAndWait("ridingString", nil)
+end
+
+}
+--@ EndMethod
+
+--@ BeginEntityEventHandler
+--@ Scope=All
+--@ Target=self
+--@ EventName=TriggerEnterEvent
+HandleTriggerEnterEvent
+{
+-- Parameters
+local TriggerBodyEntity = event.TriggerBodyEntity
+--------------------------------------------------------
+if TriggerBodyEntity.MonsterController or TriggerBodyEntity.BulletController then
+	self:characterDamaged()
+	-- client only로 설정되어 있어 파라미터를 추가 안해도 될 것 같은데
+     -- 파티원의 충돌 엔티티에 같이 반응하는 경우가 있어서 추가
+	self:discountLifeProperty()
+	
+end
+}
+--@ EndEntityEventHandler
+

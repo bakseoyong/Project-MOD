@@ -1,0 +1,175 @@
+--@ BeginProperty
+--@ SyncDirection=All
+string name = """"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+string ruid = """"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+number speed = "0"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+number guage = "0"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+number id = "0"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+Vector2 offset = "Vector2(0,0)"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+Vector2 size = "Vector2(0,0)"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void setRideRiding(string ridingName)
+{
+local ridingDataSet = _DataService:GetTable("RidingDataSet")
+
+for i = 1, ridingDataSet:GetRowCount() do
+	if ridingName == ridingDataSet:GetCell(i, "NAME") then
+		self.name = ridingName
+		self.id = i
+	end
+end
+
+
+self.size = Vector2( tonumber(ridingDataSet:GetCell(self.id, "BOXSIZE_X")), 
+	tonumber(ridingDataSet:GetCell(self.id, "BOXSIZE_Y")) )
+self.offset = Vector2( tonumber(ridingDataSet:GetCell(self.id, "OFFSET_X")), 
+	tonumber(ridingDataSet:GetCell(self.id, "OFFSET_Y")) )
+
+--[[
+self.Entity.TriggerComponent.BoxOffset = 
+	Vector2(tonumber(ridingDataSet:GetCell(self.id, "OFFSET_X")),
+		tonumber(ridingDataSet:GetCell(self.id, "OFFSET_Y")))
+self.Entity.TriggerComponent.BoxSize =
+	Vector2(tonumber(ridingDataSet:GetCell(self.id, "BOXSIZE_X")),
+		tonumber(ridingDataSet:GetCell(self.id, "BOXSIZE_Y")))
+]]--
+
+
+self.Entity.CharacterPowerController:setRidingPowerEffect( tonumber(ridingDataSet:GetCell(self.id, "POWER")) )
+self.speed = tonumber(ridingDataSet:GetCell(self.id, "SPEED"))
+self.guage = tonumber(ridingDataSet:GetCell(self.id, "GAUGE"))
+self.ruid = ridingDataSet:GetCell(self.id, "RUID")
+
+self.Entity.CharacterLifeController:setRidingRuid(self.ruid, self.Entity)
+
+self.Entity.ShootingEntityCreateManager:setRidingEffectToShootingEntity(self.id)
+
+self.Entity.CharacterCostumeEquipController:setEquipSpriteAtClient(self.Entity, "Riding", self.name, self.ruid)
+
+-- dataStorage (여기서 잔상이 남는 오류가 생기네) OnEndPlay 에서 nil값을 집어넣음으로써 해결
+local myPlayerName = self.Entity.Name
+local playerData = _DataStorageService:GetDataStorage(myPlayerName .. "_playerData")
+
+playerData:SetAndWait("ridingString", self.name)
+
+if self.Entity.CurrentMap.TownMapController then
+	local pet = self.Entity.CurrentMap:GetChildByName(self.Entity.Name .. " Pet")
+	if pet then
+		pet.SpriteRendererComponent.SpriteRUID = self.ruid
+	end
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=ServerOnly
+void OnBeginPlay()
+{
+-- 장착중인 라이딩 정보 dataStorage 가져오기
+local myPlayerName = self.Entity.Name
+local playerData = _DataStorageService:GetDataStorage(myPlayerName .. "_playerData")
+
+local ridingString = playerData:GetAndWait("ridingString")
+
+if ridingString == nil then
+	log("ridingString is nil")
+	self.name = "Snail"
+else 
+	log("ridingString : " .. ridingString)
+	self.name = ridingString
+end
+
+self:setRideRiding(self.name)
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+number getId()
+{
+return self.id
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+string getRuid()
+{
+wait(1) -- wait를 안넣으면 setRideRiding이 전부 실행되기 전에 CharacterController의 characterInstage가 먼저 호출됨
+return self.ruid
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+string getName()
+{
+return self.name
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+Vector2 getOffset()
+{
+return self.offset
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+Vector2 getSize()
+{
+return self.size
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=ServerOnly
+void OnEndPlay()
+{
+log("Execute OnEndPlay function")
+-- 여기서 dataStorage에 nil값을 넣으면 인스턴스맵에 입장할때도 실행되버림...
+-- 여기 고치면 Power랑 Life도 고쳐야됨
+-- dataStorage (여기서 잔상이 남는 오류가 생기네)
+local myPlayerName = self.Entity.Name
+local playerData = _DataStorageService:GetDataStorage(myPlayerName .. "_playerData")
+
+local teleportMapString = playerData:GetAndWait("teleportMap")
+local map = _EntityService:GetEntityByPath(teleportMapString)
+
+if map.MapComponent.IsInstanceMap == false then
+	playerData:SetAndWait("ridingString", nil)
+end
+
+
+}
+--@ EndMethod
+

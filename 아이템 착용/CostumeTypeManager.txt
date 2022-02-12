@@ -1,0 +1,41 @@
+--@ BeginProperty
+--@ SyncDirection=None
+table costumeTypeTable = "{}"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void OnBeginPlay()
+{
+
+self.costumeTypeTable["TwoHandedWeapon"] = MapleAvatarItemCategory.TwoHandedWeapon
+self.costumeTypeTable["OneHandedWeapon"] = MapleAvatarItemCategory.OneHandedWeapon
+self.costumeTypeTable["SubWeapon"] = MapleAvatarItemCategory.SubWeapon
+self.costumeTypeTable["Shoes"] = MapleAvatarItemCategory.Shoes
+self.costumeTypeTable["Shield"] = MapleAvatarItemCategory.Shield
+self.costumeTypeTable["Pants"] = MapleAvatarItemCategory.Pants
+self.costumeTypeTable["Longcoat"] = MapleAvatarItemCategory.Longcoat
+self.costumeTypeTable["Head"] = MapleAvatarItemCategory.Head
+self.costumeTypeTable["Hair"] = MapleAvatarItemCategory.Hair
+self.costumeTypeTable["Glove"] = MapleAvatarItemCategory.Glove
+self.costumeTypeTable["FaceAccessory"] = MapleAvatarItemCategory.FaceAccessory
+self.costumeTypeTable["Face"] = MapleAvatarItemCategory.Face
+self.costumeTypeTable["EyeAccessory"] = MapleAvatarItemCategory.EyeAccessory
+self.costumeTypeTable["EarAccessory"] = MapleAvatarItemCategory.EarAccessory
+self.costumeTypeTable["Ear"] = MapleAvatarItemCategory.Ear
+self.costumeTypeTable["Coat"] = MapleAvatarItemCategory.Coat
+self.costumeTypeTable["Cape"] = MapleAvatarItemCategory.Cape
+self.costumeTypeTable["Cap"] = MapleAvatarItemCategory.Cap
+self.costumeTypeTable["Body"] = MapleAvatarItemCategory.Body
+
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+any getCostumeType(string costumeType)
+{
+return self.costumeTypeTable[costumeType]
+}
+--@ EndMethod
+
