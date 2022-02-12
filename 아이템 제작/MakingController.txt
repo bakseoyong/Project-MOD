@@ -1,0 +1,230 @@
+--@ BeginProperty
+--@ SyncDirection=All
+Entity playerInventoryMakingItemScrollView = "nil"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=None
+string resultItemName = """"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=None
+number requireItemNum = "0"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=None
+table itemTypeTable = "{}"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+Entity allResultMakingItemScrollView = "nil"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=None
+string requireItemName = """"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+Component itemTypeManager = "c214b761-2030-41db-bac3-84405f5fd24d:ItemTypeManager"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+Component itemCreateRemoveManager = "c214b761-2030-41db-bac3-84405f5fd24d:ItemCreateRemoveManager"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=Client
+void loadInventoryFitMaking(Entity player)
+{
+local items = player.InventoryComponent:GetItemsWithType(Making)
+
+for index, item in pairs(items) do
+	
+	local spawnedUIEntity = self.playerInventoryMakingItemScrollView:GetChildByName("Item"):Clone()
+	spawnedUIEntity.SpriteGUIRendererComponent.ImageRUID = item.IconRUID
+	spawnedUIEntity:GetChildByName("item_count").TextComponent.Text = tostring(item.ItemCount)
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=ServerOnly
+void OnBeginPlay()
+{
+self.playerInventoryMakingItemScrollView = self.Entity:GetChildByName("PlayerInventoryMakingItemScrollView")
+self.allResultMakingItemScrollView = self.Entity:GetChildByName("AllResultMakingItemScrollView")
+self.itemTypeTable = self.itemTypeManager:getItemTypeTable()
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=ClientOnly
+void setNowResultMakingItem(string itemName,any itemType,string itemRuid)
+{
+self.resultItemName = itemName
+self.Entity:GetChildByName("ResultItemSprite").MakingItemController.name = itemName
+self.Entity:GetChildByName("ResultItemSprite").MakingItemController.itemType = itemType
+self.Entity:GetChildByName("ResultItemSprite").SpriteGUIRendererComponent.ImageRUID = itemRuid
+
+self:loadMakingDataSet(itemName, _UserService.LocalPlayer)
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Server
+void loadMakingDataSet(string itemName,Entity player)
+{
+local makingDataSet = _DataService:GetTable("MakingDataSet")
+for i = 1, makingDataSet:GetRowCount() do
+	if itemName == makingDataSet:GetCell(i, "RESULT_NAME") then
+		self.requireItemName = makingDataSet:GetCell(i, "REQUIRE_NAME")
+		self.requireItemNum = tonumber(makingDataSet:GetCell(i, "REQUIRE_NUM") )
+		
+		goto continue
+	end
+end
+::continue::
+
+local userItemDataSet = _DataService:GetTable("UserItemDataSet")
+for i = 1, userItemDataSet:GetRowCount() do
+	if self.requireItemName == userItemDataSet:GetCell(i, "Name") then
+		self:setNowRequireMakingItem(self.requireItemName, userItemDataSet:GetCell(i, "IconRUID"), player)
+		self:setItemCount(self.requireItemNum, player)
+		
+		goto continue2
+	end
+end
+
+::continue2::
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Client
+void setItemCount(number requireNum,Entity player)
+{
+if player == _UserService.LocalPlayer then
+	local item_count = self.Entity:GetChildByName("RequireItemSprite"):GetChildByName("item_count")
+	item_count.TextComponent.Text = tonumber(math.ceil(requireNum))
+	self.requireItemNum = math.ceil(requireNum)
+end
+
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Client
+void setNowRequireMakingItem(string requireName,string requireRuid,Entity player)
+{
+if player == _UserService.LocalPlayer then
+	self.requireItemName = requireName
+	self.Entity:GetChildByName("RequireItemSprite").MakingItemController.name = requireName
+	self.Entity:GetChildByName("RequireItemSprite").MakingItemController.itemType = Making
+	self.Entity:GetChildByName("RequireItemSprite").SpriteGUIRendererComponent.ImageRUID = requireRuid
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Server
+void giveMakingItemToPlayer(Entity player,string requireItemName,number requireItemNum,string resultItemName)
+{
+local items = player.InventoryComponent:GetItemsWithType(Making)
+
+for index, item in pairs(items) do
+	if item.ItemDataTableName == requireItemName then
+		if item.ItemCount >= requireItemNum then
+			
+			item.ItemCount = item.ItemCount - requireItemNum
+			player.CharacterInventoryManager:addItemCount(item.ItemDataTableName, -requireItemNum)
+			
+			if item.ItemCount == 0 then
+				_ItemService:RemoveItem(item)
+			end
+
+			local userItemDataSet = _DataService:GetTable("UserItemDataSet")
+			for i = 1, userItemDataSet:GetRowCount() do
+				if resultItemName == userItemDataSet:GetCell(i, "Name") then
+					local resultItemType = userItemDataSet:GetCell(i, "TYPE")
+					log(resultItemType)
+					_ItemService:CreateItem(self.itemTypeTable[resultItemType], resultItemName, player.InventoryComponent)
+				end
+			end
+		end
+	end
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Client
+void loadResultItems(string typeString)
+{
+local userItemDataSet = _DataService:GetTable("UserItemDataSet")
+
+for i = 1, userItemDataSet:GetRowCount() do
+	if userItemDataSet:GetCell(i, "IS_MAKING") == "YES" then
+		local name = userItemDataSet:GetCell(i, "Name")
+		local itemTypeString = userItemDataSet:GetCell(i, "TYPE")
+		local ruid = userItemDataSet:GetCell(i, "IconRUID")
+		
+		local itemType = self.itemTypeTable[itemTypeString]
+		
+		if typeString == "ALL" or typeString == itemTypeString then
+			local spawnedUIEntity = self.allResultMakingItemScrollView:GetChildByName("Item"):Clone()
+			spawnedUIEntity.MakingItemController:makingItemController(name, itemType, ruid)
+			spawnedUIEntity.SpriteGUIRendererComponent.ImageRUID = ruid
+		end
+		
+	end
+end
+
+
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+any getItemType(string itemType)
+{
+return self.itemTypeTable[itemType]
+}
+--@ EndMethod
+
+--@ BeginEntityEventHandler
+--@ Scope=Client
+--@ Target=entity:61e537b6-2e38-44b7-8657-aefeea369051
+--@ EventName=ButtonClickEvent
+HandleButtonClickEvent
+{
+-- Parameters
+local Entity = event.Entity
+--------------------------------------------------------
+self:loadInventoryFitMaking(_UserService.LocalPlayer)
+self:loadResultItems("ALL")
+
+}
+--@ EndEntityEventHandler
+
+--@ BeginEntityEventHandler
+--@ Scope=Client
+--@ Target=entity:2f5557b7-a952-4477-b8c2-a17660af4199
+--@ EventName=ButtonClickEvent
+HandleButtonClickEvent2
+{
+-- Parameters
+local Entity = event.Entity
+--------------------------------------------------------  
+local requireItemName = self.requireItemName
+local requireItemNum = self.requireItemNum
+local resultItemName = self.resultItemName
+self:giveMakingItemToPlayer(_UserService.LocalPlayer, requireItemName, requireItemNum, resultItemName)
+}
+--@ EndEntityEventHandler
+

@@ -1,0 +1,85 @@
+--@ BeginProperty
+--@ SyncDirection=None
+boolean doubleClick = "false"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+string name = """"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=None
+any itemType = "nil"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+string ruid = """"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void setRuid(string ruid)
+{
+self.Entity.SpriteGUIRendererComponent.ImageRUID = ruid
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void setName(string name)
+{
+self.name = name
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void setItemType(any itemType)
+{
+self.itemType = itemType
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void makingItemController(string name,any itemType,string ruid)
+{
+self.name = name
+self.itemType = itemType
+self.Entity.SpriteGUIRendererComponent.ImageRUID = ruid
+self.ruid = ruid
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+any getItemType()
+{
+return self.itemType
+}
+--@ EndMethod
+
+--@ BeginEntityEventHandler
+--@ Scope=All
+--@ Target=self
+--@ EventName=TouchEvent
+HandleTouchEvent
+{
+-- Parameters
+local Entity = event.Entity
+--------------------------------------------------------
+-- 더블클릭 판별
+if self.doubleClick == false then
+	self.doubleClick = true
+	wait(0.5)
+	self.doubleClick = false
+end
+
+if self.doubleClick then
+	self.Entity.Parent.Parent.MakingController:setNowResultMakingItem(self.name, self.itemType, self.ruid)
+end
+}
+--@ EndEntityEventHandler
+
