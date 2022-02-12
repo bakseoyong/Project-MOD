@@ -1,0 +1,55 @@
+--@ BeginProperty
+--@ SyncDirection=All
+boolean isTimerOn = "false"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+number sec = "0"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=Server
+Entity spawnMonster(string name,Vector3 position)
+{
+local entityTemplate = _EntityService:GetEntityByPath(self.Entity.Path .. "/MonsterParent")
+
+local spawnedEntity = _SpawnService:SpawnByEntityTemplate(entityTemplate, name, position)
+
+if isvalid(spawnedEntity) == false then log("monster spawned fail") end
+
+return spawnedEntity
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void printMonsterSpawnAnimation(Vector3 position)
+{
+local entityTemplate = self.Entity.CurrentMap:GetChildByName("MonsterSpawnAnimationParent")
+local name = "MonsterSpawnAnimation"
+
+local spawnedEntity = _SpawnService:SpawnByEntityTemplate(entityTemplate, name, position)
+wait(0.5)
+spawnedEntity:Destroy()
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Server
+void createBossAlarmEntity()
+{
+local entityTemplate = self.Entity:GetChildByName("EmptyEntity")
+local name = "Boss Alarm"
+local position = Vector3(-4.5, 7, 999.988)
+
+local spawnedEntity = _SpawnService:SpawnByEntityTemplate(entityTemplate, name, position)
+spawnedEntity:AddComponent("BossAlarmController")
+
+
+wait(3)
+
+spawnedEntity:Destroy()
+}
+--@ EndMethod
+

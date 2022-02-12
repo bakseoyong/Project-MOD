@@ -1,0 +1,66 @@
+--@ BeginMethod
+--@ MethodExecSpace=Server
+void setStartButtonUnenable()
+{
+self.Entity.Enable = false
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Server
+void addComponentToServer(string simpleStage)
+{
+if not self.Entity.CurrentMap:AddComponent("Stage" .. simpleStage .. "Manager") then
+	log("Stage " .. simpleStage .. " load fail")
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Server
+void setEnableCoolTimeGenerateMonster()
+{
+local table = self.Entity.CurrentMap:GetChildComponentsByTypeName("CoolTimeGenerateMonsterController")
+
+
+for i = 1, #table do
+	
+	log(table[i]:setEnable())
+end
+
+
+}
+--@ EndMethod
+
+--@ BeginEntityEventHandler
+--@ Scope=All
+--@ Target=self
+--@ EventName=ButtonClickEvent
+HandleButtonClickEvent
+{
+-- Parameters
+local Entity = event.Entity
+--------------------------------------------------------
+--[[ Server Only, Client Only 하면 동작을 안하고 '사용하지 않음'의 경우
+ 클라이언트에서만 동작한다. ]]--
+self.Entity.Enable = false
+self:setStartButtonUnenable()
+
+local parent = self.Entity.Parent
+
+-- 다른 클라이언트도 동작하도록 서버에서 받아서 클라이언트로 넘겨줘야 한다.
+local count = parent:GetChildByName("Count")
+count.CountController:setStartTextToServer()
+
+local stageText = parent:GetChildByName("StageText")
+stageText.StageTextController:setEnableToServer(false)
+
+wait(4)
+
+local simpleStage = string.sub(self.Entity.CurrentMapName, 1, 1) .. string.sub(self.Entity.CurrentMapName, 3)
+self:addComponentToServer(simpleStage)
+self:setEnableCoolTimeGenerateMonster()
+
+}
+--@ EndEntityEventHandler
+

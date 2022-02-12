@@ -1,0 +1,20 @@
+--@ BeginMethod
+--@ MethodExecSpace=ServerOnly
+void OnBeginPlay()
+{
+-- stage map slice. example) 1-1 => Stage11Manager
+self:monsterGenerate()
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void monsterGenerate()
+{
+local mcm = self.Entity.MonsterCreateManager
+
+--spawn monster
+mcm:spawnMonster("Pig", Vector3(10, 3, 0))
+}
+--@ EndMethod
+
