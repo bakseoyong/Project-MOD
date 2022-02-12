@@ -1,0 +1,133 @@
+--@ BeginProperty
+--@ SyncDirection=All
+number id = "0"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+string ruid = """"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+number hp = "0"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+number allMonsterDataSetIndex = "nil"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+number speed = "0"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+boolean isBoss = "false"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+Component transformComponent = ":56"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=ServerOnly
+void OnBeginPlay()
+{
+self:addToalScore()
+self:initPropertyLoadDataSet()
+self:setRuid()
+self:setBoxAndScale()
+
+self.transformComponent = self.Entity.TransformComponent
+
+if self.Entity.TweenLineComponent then
+	self.speed = 0
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Server
+void initPropertyLoadDataSet()
+{
+local allMonsterDataSet = _DataService:GetTable("AllMonsterDataSet")
+for i = 1, allMonsterDataSet:GetRowCount() do
+	if allMonsterDataSet:GetCell(i, "NAME") == self.Entity.Name then
+		self.allMonsterDataSetIndex = i
+	end
+end
+
+self.hp = tonumber(allMonsterDataSet:GetCell(self.allMonsterDataSetIndex, "HP"))
+self.ruid = allMonsterDataSet:GetCell(self.allMonsterDataSetIndex, "RUID")
+self.speed = tonumber(allMonsterDataSet:GetCell(self.allMonsterDataSetIndex, "SPEED"))
+self.isBoss = allMonsterDataSet:GetCell(self.allMonsterDataSetIndex, "TYPE") == "BOSS" and true or false
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void setRuid()
+{
+self.Entity.SpriteRendererComponent.SpriteRUID = self.ruid
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=ServerOnly
+void OnUpdate(number delta)
+{
+-- 함수 호출안하면 메모리 덜 낭비할까봐..
+self.transformComponent:Translate(-self.speed, 0)
+
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void setBoxAndScale()
+{
+local allMonsterDataSet = _DataService:GetTable("AllMonsterDataSet")
+
+local boxSize = Vector2(tonumber(allMonsterDataSet:GetCell(self.allMonsterDataSetIndex, "BOXSIZE_X")), 
+	tonumber(allMonsterDataSet:GetCell(self.allMonsterDataSetIndex, "BOXSIZE_Y")))
+local boxOffset = Vector2(tonumber(allMonsterDataSet:GetCell(self.allMonsterDataSetIndex, "OFFSET_X")), 
+	tonumber(allMonsterDataSet:GetCell(self.allMonsterDataSetIndex, "OFFSET_Y")))
+local scale = tonumber(allMonsterDataSet:GetCell(self.allMonsterDataSetIndex, "SCALE"))
+
+
+self:setBoxAndScaleAtClient(boxSize, boxOffset)
+
+if scale ~= nil then
+	log(self.Entity.Name)
+	self.Entity.TransformComponent.Scale.x = scale
+	self.Entity.TransformComponent.Scale.y = scale
+	log(self.Entity.TransformComponent.Scale.x)
+end
+
+self.Entity.TriggerComponent.BoxSize = boxSize
+self.Entity.TriggerComponent.BoxOffset = boxOffset
+self.Entity.ExtendMonsterHitComponent.BoxSize = boxSize
+self.Entity.ExtendMonsterHitComponent.BoxOffset = boxOffset
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void addToalScore()
+{
+self.Entity.CurrentMap.RewardCreateManager:addTotalScore()
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=Client
+void setBoxAndScaleAtClient(Vector2 boxSize,Vector2 boxOffset)
+{
+log(self.Entity.TriggerComponent.BoxSize.x .. " " .. self.Entity.TriggerComponent.BoxSize.y)
+}
+--@ EndMethod
+

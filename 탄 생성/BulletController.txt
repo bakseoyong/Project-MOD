@@ -1,0 +1,32 @@
+--@ BeginProperty
+--@ SyncDirection=All
+Vector2 vec = "Vector2(0,0)"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void setVector(Vector2 vec)
+{
+self.vec = vec
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void moving()
+{
+local pos = self.Entity.TransformComponent.Position
+pos.x = pos.x + self.vec.x
+pos.y = pos.y + self.vec.y
+self.Entity.TransformComponent.Position = Vector3(pos.x, pos.y, pos.z)
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=ServerOnly
+void OnUpdate(number delta)
+{
+self:moving()
+}
+--@ EndMethod
+

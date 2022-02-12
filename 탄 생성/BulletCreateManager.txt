@@ -1,0 +1,176 @@
+--@ BeginProperty
+--@ SyncDirection=All
+number num = "0"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+table<number> vX = "number"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+table<number> vY = "number"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+boolean odd = "false"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+number speed = "0"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+number waitSequatialTime = "0"
+--@ EndProperty
+
+--@ BeginProperty
+--@ SyncDirection=All
+string type = """"
+--@ EndProperty
+
+--@ BeginMethod
+--@ MethodExecSpace=ServerOnly
+void OnBeginPlay()
+{
+self:setPropertyFromDataSet()
+self:setInitBullets()
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=ServerOnly
+void OnUpdate(number delta)
+{
+if self._T.time == nil then self._T.time = 0 end
+
+self._T.time = self._T.time + delta
+
+if self._T.time > 3 then
+	self._T.time = 0
+	
+	for i = 1, self.num do
+		self:createBullets(i)
+		
+		wait(self.waitSequatialTime)
+	end
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void setInitBullets()
+{
+if self.type == "Directed" then
+	self:initDirectedBullets()
+elseif self.type == "Circle" then
+	self:initCircleBullets()
+elseif self.type == "NWay" then
+	self:initNWayBullets()
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void setPropertyFromDataSet()
+{
+local allMonsterBulletDataSet = _DataService:GetTable("AllMonsterBulletDataSet")
+
+for i = 1, allMonsterBulletDataSet:GetRowCount() do
+	if allMonsterBulletDataSet:GetCell(i, "NAME") == self.Entity.Name then
+		self.num = tonumber(allMonsterBulletDataSet:GetCell(i, "NUM"))
+		self.odd = (self.num % 2) == 0 and false or true
+		self.speed = tonumber(allMonsterBulletDataSet:GetCell(i, "SPEED"))
+		self.waitSequatialTime = tonumber(allMonsterBulletDataSet:GetCell(i, "WAIT_SEQ_TIME"))
+		self.type = allMonsterBulletDataSet:GetCell(i, "TYPE")
+		return
+	end
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void createBullets(number index)
+{
+local entityTemplate = self.Entity.CurrentMap:GetChildByName("BulletParent")
+local name = "Test Bullet"
+local position = self.Entity.TransformComponent.Position
+
+local spawnedEntity = _SpawnService:SpawnByEntityTemplate(entityTemplate, name, position)
+
+spawnedEntity.BulletController:setVector(Vector2(self.vX[index], self.vY[index]))
+
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void initCircleBullets()
+{
+
+-- 탄과 탄 사이의 각도를 계산하기
+local rad_step = 3.141592 * 2 / self.num;
+
+-- 최초의 탄의 각도를 계산하기:
+-- 홀수 패턴일 때는 rad_step/2만큼 틀어줌.
+local rad = self.odd and rad_step / 2 or 0;
+
+-- n개의 탄의 속도벡터를 구하기:
+-- speed의 속도로 각도 rad 방향으로 날아가는 탄의 속도벡터를 구하기
+-- 원형탄을 날리는 처리를 응용한 것
+for i = 0, self.num, 1 do
+	self.vX[i] = math.cos(rad) * self.speed
+	self.vY[i] = math.sin(rad) * self.speed
+
+	i = i + 1
+	rad = rad + rad_step
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void initDirectedBullets()
+{
+-- n개의 탄의 속도벡터를 구하기:
+-- speed의 속도로 각도 rad 방향으로 날아가는 탄의 속도벡터를 구하기
+-- 원형탄을 날리는 처리를 응용한 것
+for i = 1, self.num, 1 do
+	self.vX[i] = -self.speed
+	self.vY[i] = 0
+end
+}
+--@ EndMethod
+
+--@ BeginMethod
+--@ MethodExecSpace=All
+void initNWayBullets()
+{
+-- 탄과 탄 사이의 각도를 라디안으로 변환하기
+local theta = 5 --30
+local rad_step = 3.141592 / 180 * theta;
+
+-- 가장자리의 탄과 중심 부분의 탄의 각도를 계산하기
+local rad = self.num % 2 and -self.num / 2 * rad_step or (-self.num / 2 + 0.5) * rad_step
+
+-- n개의 탄의 속도를 계산하기
+for i = 1, self.num do
+	rad = rad + rad_step
+	-- (vx[i],vy[i])를 구하기:
+	-- 속도 벡터 (vx0,vy0)를 rad만큼 회전시키기.
+	local c = math.cos(rad)
+	local s = math.sin(rad)
+	
+	self.vX[i] = -0.05 * c - 0 * s
+	self.vY[i] = -0.05 * s - 0 * s
+end
+}
+--@ EndMethod
+
